@@ -23,6 +23,7 @@ from time import sleep
 import sys
 from gdb_socket import GDBSocket
 from gdb_websocket import GDBWebSocket
+import binascii
 
 SIGINT = (2)
 SIGSEGV = (11)
@@ -554,6 +555,12 @@ class GDBServer(threading.Thread):
         
         elif query[0].find('Tf') != -1:
             return self.createRSPPacket("")
+
+        elif query[0] == 'CRC':
+            # CRC checksum of a block memory using crc-32
+            data = query[1].split(',')
+            resp = self.checksum_memory(int(data[0], 16), int(data[1].split('#')[0], 16))
+            return self.createRSPPacket(resp)
         
         elif 'Offsets' in query[0]:
             resp = "Text=0;Data=0;Bss=0"
@@ -679,3 +686,15 @@ class GDBServer(threading.Thread):
     def hexEncode(self, string):
         return ''.join(['%02x' % ord(i) for i in string])
 
+    def checksum_memory(self, address, size):
+        crc_checksum = 0xffffffff
+        words = self.target.readBlockMemoryAligned32(address, size)
+        index = 0
+        stream = ''
+        # while size:
+        #     # stream += chr(words[index] & 0xFF) + chr((words[index] >> 8) & 0xff) + chr((words[index] >> 16) & 0xff) + chr((words[index] >> 24) & 0xff)
+        #     stream += chr((words[index] >> 24) & 0xff) + chr((words[index] >> 16) & 0xff) + chr((words[index] >> 8) & 0xff) + chr(words[index] & 0xFF)
+        #     index += 1
+        #     size -= 4
+        # crc_checksum = binascii.crc32(stream, crc_checksum) & 0xffffffff
+        return 'C' + str(1)
